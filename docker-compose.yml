@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: citizenloop-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-citizenloop}
+      MYSQL_USER: ${DB_USER:-citizenloop}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-citizenloop_pass}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./citizenloop-backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - citizenloop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+
+  # Backend Spring Boot Application
+  backend:
+    build:
+      context: ./citizenloop-backend
+      dockerfile: Dockerfile
+    container_name: citizenloop-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${DB_NAME:-citizenloop}?useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-citizenloop}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-citizenloop_pass}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${HIBERNATE_DDL_AUTO:-update}
+      JWT_SECRET: ${JWT_SECRET:-yourSuperSecretKeyThatMustBeAtLeast32CharactersLong}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - citizenloop-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      timeout: 20s
+      retries: 5
+      interval: 15s
+
+  # Frontend React Application
+  frontend:
+    build:
+      context: ./citizenloop-frontend
+      dockerfile: Dockerfile
+    container_name: citizenloop-frontend
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8080/api}
+      REACT_APP_ENV: ${REACT_APP_ENV:-development}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - citizenloop-network
+    restart: unless-stopped
+
+  # Optional: phpMyAdmin for database management
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: citizenloop-phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USER:-citizenloop}
+      PMA_PASSWORD: ${DB_PASSWORD:-citizenloop_pass}
+      PMA_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    depends_on:
+      - mysql
+    networks:
+      - citizenloop-network
+    restart: unless-stopped
+
+networks:
+  citizenloop-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
