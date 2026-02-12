@@ -371,34 +371,12 @@ docker build -t citizenloop-frontend ./citizenloop-frontend
 docker-compose up
 ```
 
-### Cloud Deployment (AWS/Azure)
-- Backend: Deploy to Elastic Beanstalk / App Service
-- Frontend: Deploy to S3 + CloudFront / Static Web Apps
-- Database: RDS MySQL / Azure Database for MySQL
-
----
-
 ## Contributing
 
 1. Create feature branch: `git checkout -b feature/new-feature`
 2. Commit changes: `git commit -m "Add feature"`
 3. Push to branch: `git push origin feature/new-feature`
 4. Open pull request with test coverage
-
----
-
-## License
-
-MIT License - See LICENSE file for details
-
----
-
-## Support & Contact
-
-For issues, questions, or feedback:
-- 📧 Email: support@citizenloop.com
-- 🐛 GitHub Issues: [repo-issues](link)
-- 📱 Demo App: [citizenloop.app](link)
 
 ---
 
